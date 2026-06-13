@@ -80,19 +80,13 @@
             color: var(--white); display: inline-block; padding: 4px 10px; border-radius: 8px;
         }
 
-        /* === CONTROLS (INPUTS & FILTER) === */
+        /* === CONTROLS === */
         .controls-wrapper {
             display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; align-items: flex-end;
         }
 
         .input-group { flex: 1; min-width: 300px; }
         .limit-group { width: 120px; }
-        .filter-group { 
-            display: flex; align-items: center; gap: 10px; 
-            height: 54px; padding: 0 15px; 
-            border: 3px solid var(--border-color); 
-            border-radius: 12px; background: #fafafa;
-        }
 
         label { font-weight: 700; margin-bottom: 8px; display: block; font-size: 15px; }
         
@@ -104,9 +98,6 @@
         input[type="text"]:focus, input[type="number"]:focus {
             background: #fdffed; box-shadow: 4px 4px 0px var(--primary); transform: translate(-2px, -2px);
         }
-
-        input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary); }
-        .filter-group label { margin-bottom: 0; cursor: pointer; }
 
         /* === TOOLBAR === */
         .toolbar { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
@@ -147,7 +138,6 @@
         
         .col-thumb img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color); }
         .col-caption { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .badge-pin { background: var(--yellow); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid var(--border-color); margin-right: 6px; }
         .col-link a { color: var(--primary); text-decoration: none; font-weight: 700; }
     </style>
 </head>
@@ -185,10 +175,6 @@
         <div class="limit-group">
             <label>🔢 Số lượng:</label>
             <input type="number" id="limitInput" min="1" max="30" value="30" title="Tối đa 30 video do giới hạn API">
-        </div>
-        <div class="filter-group">
-            <input type="checkbox" id="includePinned" checked>
-            <label for="includePinned">Bao gồm Video Ghim 📌</label>
         </div>
     </div>
 
@@ -244,67 +230,32 @@
         $('total-videos').innerText = fmt(count);
     }
 
-    // === SMART FETCH VỚI PROXY DỰ PHÒNG ===
-    async function smartProxyFetch(targetUrl) {
-        const PROXY_LIST = [
-            { url: 'https://api.allorigins.win/get?url=', type: 'wrapped' },
-            { url: 'https://corsproxy.io/?', type: 'direct' },
-            { url: 'https://api.codetabs.com/v1/proxy?quest=', type: 'direct' }
-        ];
-
-        for (let proxy of PROXY_LIST) {
-            try {
-                const res = await fetch(proxy.url + encodeURIComponent(targetUrl));
-                if (!res.ok) continue;
-
-                let data;
-                if (proxy.type === 'wrapped') {
-                    const temp = await res.json();
-                    if(!temp.contents) throw new Error();
-                    data = JSON.parse(temp.contents);
-                } else {
-                    data = await res.json();
-                }
-
-                if(data.code === 0) return data; // Gọi API thành công
-            } catch (e) {
-                console.log(`Proxy ${proxy.url} thất bại, đang thử proxy khác...`);
-            }
-        }
-        throw new Error("Toàn bộ proxy đều bị từ chối.");
-    }
-
     $('fetchBtn').addEventListener('click', async () => {
         const username = extractUsername($('channelInput').value);
         if (!username) return alert("Vui lòng nhập Username hợp lệ!");
 
-        // Lấy giới hạn và tuỳ chọn lọc
+        // Lấy giới hạn số lượng video
         const limitCount = Math.min(parseInt($('limitInput').value) || 30, 30);
-        const isIncludePinned = $('includePinned').checked;
 
         processedData = []; 
         $('tableBody').innerHTML = ''; 
         updateDashboard();
         $('fetchBtn').disabled = true; $('exportBtn').disabled = true;
 
-        log(`⏳ Đang kết nối API để quét kênh @${username}...`, 'log-process');
+        log(`⏳ Đang kết nối API qua Vercel Proxy để quét kênh @${username}...`, 'log-process');
 
         try {
-            // Chỉ cần gọi 1 lần vì số lượng <= 30
-           const apiUrl = `/api/tikwm?unique_id=@${username}&count=35&cursor=0`;
+            // Gọi API thông qua cấu hình rewrites của Vercel
+            const apiUrl = `/api/tikwm?unique_id=@${username}&count=35&cursor=0`;
             const res = await fetch(apiUrl);
+            
+            if (!res.ok) throw new Error(`Lỗi kết nối từ Vercel (HTTP ${res.status})`);
+            
             const data = await res.json();
 
-            if (data && data.data && data.data.videos) {
-                let rawVideos = data.data.videos;
-
-                // 1. Lọc video ghim nếu người dùng KHÔNG tick chọn
-                if (!isIncludePinned) {
-                    rawVideos = rawVideos.filter(v => v.is_top !== 1);
-                }
-
-                // 2. Cắt đúng số lượng yêu cầu (Giới hạn tối đa 30)
-                const finalVideos = rawVideos.slice(0, limitCount);
+            if (data && data.code === 0 && data.data && data.data.videos) {
+                // Cắt đúng số lượng yêu cầu
+                const finalVideos = data.data.videos.slice(0, limitCount);
 
                 finalVideos.forEach((info, index) => {
                     const resultObj = {
@@ -319,32 +270,31 @@
                         comment: info.comment_count || 0,
                         save: info.collect_count || 0,
                         share: info.share_count || 0,
-                        create_time: info.create_time,
-                        isPinned: info.is_top === 1
+                        create_time: info.create_time
                     };
                     processedData.push(resultObj);
                     renderSingleRow(resultObj);
                 });
 
                 updateDashboard();
-                log(`🎉 Hoàn tất! Đã lấy thành công ${processedData.length} video.`, 'log-done');
+                log(`🎉 Hoàn tất! Đã lấy thành công ${processedData.length} video mới nhất.`, 'log-done');
                 if(processedData.length > 0) $('exportBtn').disabled = false;
             } else {
-                throw new Error("API không trả về video nào.");
+                throw new Error("API TikWM không trả về video nào hoặc kênh không tồn tại.");
             }
         } catch (err) {
-            log(`❌ Lỗi kết nối hoặc API từ chối. Hãy thử lại sau vài giây.`, 'log-error');
+            console.error(err);
+            log(`❌ ${err.message}. Hãy kiểm tra lại cấu hình vercel.json hoặc thử lại.`, 'log-error');
         }
         $('fetchBtn').disabled = false;
     });
 
     function renderSingleRow(data) {
         const tr = document.createElement('tr');
-        const pinBadge = data.isPinned ? '<span class="badge-pin">📌 GHIM</span>' : '';
         tr.innerHTML = `
             <td>${data.id}</td>
             <td class="col-thumb"><img src="${data.avatar}" loading="lazy"></td>
-            <td class="col-caption" title="${data.caption.replace(/"/g, '&quot;')}">${pinBadge}${data.caption}</td>
+            <td class="col-caption" title="${data.caption.replace(/"/g, '&quot;')}">${data.caption}</td>
             <td style="font-weight:800">${fmt(data.view)}</td>
             <td>${fmt(data.like)}</td><td>${fmt(data.comment)}</td><td>${fmt(data.save)}</td><td>${fmt(data.share)}</td>
             <td>${formatDate(data.create_time)}</td>
@@ -359,9 +309,9 @@
     });
 
     $('exportBtn').addEventListener('click', () => {
-        const headers = ['STT', 'Loai', 'Ngay Dang', 'Caption', 'View', 'Like', 'Comment', 'Save', 'Share', 'Link Goc'];
+        const headers = ['STT', 'Ngay Dang', 'Caption', 'View', 'Like', 'Comment', 'Save', 'Share', 'Link Goc'];
         const rows = processedData.map(i => [
-            i.id, i.isPinned ? 'Ghim' : 'Thuong', formatDate(i.create_time), 
+            i.id, formatDate(i.create_time), 
             `"${(i.caption || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`, 
             i.view, i.like, i.comment, i.save, i.share, i.link
         ]);
