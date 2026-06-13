@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TikTok Channel Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === THIẾT KẾ NEUBRUTALISM / CARTOON === */
+        :root {
+            --primary: #ff0050;      /* Hồng TikTok */
+            --secondary: #00f2ea;    /* Xanh TikTok */
+            --yellow: #ffd900;       /* Màu nhấn */
+            --bg-color: #f0f4f8;     /* Nền trang */
+            --border-color: #000;    /* Viền đen */
+            --white: #fff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Be Vietnam Pro', sans-serif; 
+            padding: 20px; 
+            background: var(--bg-color); 
+            color: var(--border-color);
+            background-image: radial-gradient(#dbe3ea 15%, transparent 16%);
+            background-size: 20px 20px;
+            position: relative; 
+        }
+
+        /* === KHUNG CHÍNH (MAIN) === */
+        main { 
+            max-width: 1400px; 
+            margin: 40px auto; 
+            background: var(--white); 
+            padding: 30px; 
+            border: 3px solid var(--border-color);
+            box-shadow: 10px 10px 0px var(--border-color);
+            border-radius: 20px;
+        }
+
+        h1 { 
+            font-family: 'Fredoka', sans-serif; 
+            margin-top: 0; 
+            text-align: center; 
+            color: var(--primary); 
+            font-size: 3rem;
+            text-shadow: 3px 3px 0px var(--border-color);
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        /* === DASHBOARD THỐNG KÊ === */
+        #stats-board { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+        
+        .stat-card { 
+            background: #fff; 
+            padding: 15px; 
+            text-align: center; 
+            border: 3px solid var(--border-color);
+            box-shadow: 6px 6px 0px var(--border-color);
+            border-radius: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card:nth-child(1) { background: #e0f7fa; } /* View */
+        .stat-card:nth-child(2) { background: #fce4ec; } /* Like */
+        .stat-card:nth-child(3) { background: #fff9c4; } /* Comment */
+        .stat-card:nth-child(4) { background: #f3e5f5; } /* Save */
+        .stat-card:nth-child(5) { background: #e8f5e9; } /* Share */
+        .stat-card:nth-child(6) { background: #ffe0b2; } /* Total Videos */
+
+        .stat-title { 
+            font-size: 13px; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            margin-bottom: 5px; 
+        }
+        .stat-value { 
+            font-size: 24px; 
+            font-weight: 800; 
+            margin-bottom: 8px; 
+        }
+        .stat-avg { 
+            font-size: 12px; 
+            font-weight: 600; 
+            background: var(--border-color); 
+            color: var(--white); 
+            display: inline-block; 
+            padding: 4px 10px; 
+            border-radius: 8px;
+        }
+
+        /* === INPUT AREA === */
+        .input-area { margin-bottom: 25px; }
+        label { font-weight: 700; margin-bottom: 10px; display: block; font-size: 16px;}
+        
+        input[type="text"] { 
+            width: 100%; 
+            padding: 15px; 
+            font-size: 16px; 
+            font-family: 'Be Vietnam Pro', sans-serif;
+            border: 3px solid var(--border-color);
+            box-shadow: 5px 5px 0px var(--border-color);
+            border-radius: 12px;
+            outline: none;
+            transition: 0.2s;
+        }
+        input[type="text"]:focus {
+            background: #fdffed;
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px var(--primary);
+        }
+
+        /* === TOOLBAR BUTTONS === */
+        .toolbar { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;}
+        
+        button { 
+            padding: 0 25px; 
+            height: 50px; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 15px; 
+            font-family: 'Be Vietnam Pro', sans-serif;
+            border: 3px solid var(--border-color);
+            box-shadow: 5px 5px 0px var(--border-color);
+            border-radius: 12px;
+            transition: all 0.1s;
+        }
+        button:active {
+            transform: translate(3px, 3px);
+            box-shadow: 2px 2px 0px var(--border-color);
+        }
+        button:disabled {
+            background: #ccc !important;
+            color: #777 !important;
+            box-shadow: none !important;
+            transform: translate(3px, 3px);
+            cursor: not-allowed;
+        }
+        
+        #fetchBtn { background: var(--primary); color: #fff; }
+        #fetchBtn:hover { background: #ff3370; }
+        .btn-secondary { background: var(--white); color: var(--border-color); }
+        .btn-excel { background: var(--secondary); color: var(--border-color); }
+
+        /* === LOGGER === */
+        #status { 
+            margin-bottom: 25px; 
+            padding: 15px; 
+            border-radius: 12px; 
+            font-weight: 600;
+            border: 3px solid var(--border-color);
+            background: #fff;
+        }
+        .log-process { background: #e3f2fd !important; color: #0d47a1; }
+        .log-done { background: #e8f5e9 !important; color: #1b5e20; }
+        .log-error { background: #ffebee !important; color: #b71c1c; }
+
+        /* === TABLE === */
+        .table-container { 
+            overflow-x: auto; 
+            border-radius: 15px; 
+            border: 3px solid var(--border-color);
+        }
+        
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th { 
+            background: var(--secondary); 
+            color: var(--border-color); 
+            font-weight: 700; 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 3px solid var(--border-color);
+            border-right: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        td { 
+            border-bottom: 2px solid var(--border-color); 
+            border-right: 2px solid var(--border-color);
+            padding: 12px 15px; 
+            vertical-align: middle; 
+            font-weight: 500;
+        }
+        
+        tr:last-child td { border-bottom: none; }
+        th:last-child, td:last-child { border-right: none; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #fffde7; }
+        
+        .col-thumb img { 
+            width: 45px; height: 45px; object-fit: cover; 
+            border-radius: 8px; border: 2px solid var(--border-color); 
+        }
+        
+        .col-caption { 
+            max-width: 300px; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        
+        .badge-pin {
+            background: var(--yellow);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            border: 1px solid var(--border-color);
+            margin-right: 6px;
+        }
+
+        .col-link a { color: var(--primary); text-decoration: none; font-weight: 700; }
+        .col-link a:hover { text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            .toolbar { flex-direction: column; }
+            button { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<main>
+    <h1>🎬 TikTok Channel Analyzer</h1>
+    
+    <div id="stats-board">
+        <div class="stat-card">
+            <div class="stat-title">Lượt Xem 👁️</div>
+            <div class="stat-value" id="total-view">0</div>
+            <div class="stat-avg" id="avg-view">TB: 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Tim ❤️</div>
+            <div class="stat-value" id="total-like">0</div>
+            <div class="stat-avg" id="avg-like">TB: 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Bình Luận 💬</div>
+            <div class="stat-value" id="total-cmt">0</div>
+            <div class="stat-avg" id="avg-cmt">TB: 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Lưu 💾</div>
+            <div class="stat-value" id="total-save">0</div>
+            <div class="stat-avg" id="avg-save">TB: 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Chia Sẻ 🔗</div>
+            <div class="stat-value" id="total-share">0</div>
+            <div class="stat-avg" id="avg-share">TB: 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Tổng Video 📹</div>
+            <div class="stat-value" id="total-videos">0</div>
+            <div class="stat-avg">Đã Quét</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <label>📝 Nhập Username Kênh TikTok (VD: @vtv24news):</label>
+        <input type="text" id="channelInput" placeholder="@username hoặc dán link kênh vào đây...">
+    </div>
+
+    <div class="toolbar">
+        <button id="fetchBtn">🚀 Quét Toàn Bộ Kênh</button>
+        <button class="btn-secondary" id="clearBtn">🧹 Xoá Sạch</button>
+        <button class="btn-excel" id="exportBtn" disabled>📥 Xuất Excel</button>
+    </div>
+
+    <div id="status">👋 Sẵn sàng làm việc! Nhập ID kênh để bắt đầu.</div>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Ảnh</th>
+                    <th>Caption</th>
+                    <th>View</th>
+                    <th>Like</th>
+                    <th>Cmt</th>
+                    <th>Save</th>
+                    <th>Share</th>
+                    <th>Ngày Đăng</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    let processedData = []; 
+    let isProcessing = false;
+
+    // === HÀM TIỆN ÍCH ===
+    const $ = (id) => document.getElementById(id);
+    const log = (msg, type = '') => {
+        const el = $('status');
+        el.textContent = msg;
+        el.className = type;
+    };
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const fmt = (n) => n.toLocaleString('vi-VN'); 
+
+    // Chuyển Timestamp sang ngày tháng
+    const formatDate = (timestamp) => {
+        const d = new Date(timestamp * 1000);
+        return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    };
+
+    // Chuẩn hoá Username đầu vào
+    const extractUsername = (input) => {
+        input = input.trim();
+        if (input.includes('tiktok.com/')) {
+            const match = input.match(/@([\w.-]+)/);
+            return match ? match[1] : null;
+        }
+        return input.startsWith('@') ? input.substring(1) : input;
+    };
+
+    // Cập nhật Dashboard thống kê
+    function updateDashboard() {
+        let tView = 0, tLike = 0, tCmt = 0, tSave = 0, tShare = 0;
+        const count = processedData.length;
+
+        processedData.forEach(i => {
+            tView += i.view;
+            tLike += i.like;
+            tCmt += i.comment;
+            tSave += i.save;
+            tShare += i.share;
+        });
+
+        const calcAvg = (total) => count > 0 ? fmt(Math.round(total / count)) : '0';
+
+        $('total-view').innerText = fmt(tView);   $('avg-view').innerText = `TB: ${calcAvg(tView)}`;
+        $('total-like').innerText = fmt(tLike);   $('avg-like').innerText = `TB: ${calcAvg(tLike)}`;
+        $('total-cmt').innerText = fmt(tCmt);     $('avg-cmt').innerText = `TB: ${calcAvg(tCmt)}`;
+        $('total-save').innerText = fmt(tSave);   $('avg-save').innerText = `TB: ${calcAvg(tSave)}`;
+        $('total-share').innerText = fmt(tShare); $('avg-share').innerText = `TB: ${calcAvg(tShare)}`;
+        $('total-videos').innerText = fmt(count);
+    }
+
+    // Proxy Fetch (Chống lỗi CORS trên Web)
+    async function proxyFetch(url) {
+        // Sử dụng api.allorigins.win làm proxy để vượt CORS
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        return JSON.parse(data.contents);
+    }
+
+    // === LOGIC CHÍNH: QUÉT KÊNH ===
+    $('fetchBtn').addEventListener('click', async () => {
+        if (isProcessing) return;
+
+        const rawInput = $('channelInput').value;
+        const username = extractUsername(rawInput);
+        
+        if (!username) return alert("Vui lòng nhập đúng định dạng username (VD: @vtv24news) hoặc link kênh!");
+
+        isProcessing = true;
+        processedData = []; 
+        $('tableBody').innerHTML = ''; 
+        updateDashboard();
+        
+        $('fetchBtn').disabled = true;
+        $('exportBtn').disabled = true;
+
+        let cursor = 0;
+        let hasMore = true;
+        let loopCount = 1;
+
+        try {
+            while (hasMore) {
+                log(`⏳ Đang quét dữ liệu trang ${loopCount}... (Đã lấy ${processedData.length} video)`, 'log-process');
+                
+                // Endpoint lấy danh sách video của kênh
+                const apiUrl = `https://www.tikwm.com/api/user/posts?unique_id=@${username}&count=30&cursor=${cursor}`;
+                const data = await proxyFetch(apiUrl);
+
+                if (data.code === 0 && data.data && data.data.videos) {
+                    const videos = data.data.videos;
+                    
+                    videos.forEach((info, index) => {
+                        const resultObj = {
+                            id: processedData.length + 1,
+                            video_id: info.video_id,
+                            author: info.author.unique_id,
+                            link: `https://www.tiktok.com/@${info.author.unique_id}/video/${info.video_id}`,
+                            avatar: info.cover,
+                            caption: info.title || 'Không có tiêu đề',
+                            view: info.play_count || 0,
+                            like: info.digg_count || 0,
+                            comment: info.comment_count || 0,
+                            save: info.collect_count || 0,
+                            share: info.share_count || 0,
+                            create_time: info.create_time,
+                            isPinned: info.is_top === 1 // Nhận diện video ghim
+                        };
+                        processedData.push(resultObj);
+                        renderSingleRow(resultObj);
+                    });
+
+                    updateDashboard();
+
+                    // Cập nhật Cursor cho vòng lặp tiếp theo
+                    hasMore = data.data.hasMore;
+                    cursor = data.data.cursor;
+                    loopCount++;
+
+                    // Nghỉ 1 giây để tránh bị TikWM block IP
+                    await sleep(1000);
+                } else {
+                    hasMore = false; // Dừng nếu API báo lỗi hoặc hết data
+                }
+            }
+            log(`🎉 Hoàn tất! Đã quét tổng cộng ${processedData.length} video của kênh @${username}.`, 'log-done');
+        } catch (err) {
+            console.error(err);
+            log(`❌ Lỗi kết nối hoặc API từ chối. Đã lấy được ${processedData.length} video.`, 'log-error');
+        }
+
+        isProcessing = false;
+        $('fetchBtn').disabled = false;
+        if(processedData.length > 0) $('exportBtn').disabled = false;
+    });
+
+    // === GIAO DIỆN BẢNG ===
+    function renderSingleRow(data) {
+        const tbody = $('tableBody');
+        const tr = document.createElement('tr');
+        
+        const pinBadge = data.isPinned ? '<span class="badge-pin">📌 GHIM</span>' : '';
+
+        tr.innerHTML = `
+            <td>${data.id}</td>
+            <td class="col-thumb"><img src="${data.avatar}" loading="lazy"></td>
+            <td class="col-caption" title="${data.caption.replace(/"/g, '&quot;')}">
+                ${pinBadge}${data.caption}
+            </td>
+            <td style="font-weight:800">${fmt(data.view)}</td>
+            <td>${fmt(data.like)}</td>
+            <td>${fmt(data.comment)}</td>
+            <td>${fmt(data.save)}</td>
+            <td>${fmt(data.share)}</td>
+            <td>${formatDate(data.create_time)}</td>
+            <td class="col-link"><a href="${data.link}" target="_blank">Xem</a></td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    // === CHỨC NĂNG PHỤ ===
+    $('clearBtn').addEventListener('click', () => {
+        $('channelInput').value = '';
+        $('tableBody').innerHTML = '';
+        processedData = [];
+        updateDashboard();
+        $('exportBtn').disabled = true;
+        log("Đã dọn dẹp sạch sẽ! 🧹");
+    });
+
+    $('exportBtn').addEventListener('click', () => {
+        if (!processedData.length) return;
+        const headers = ['STT', 'Loai', 'Ngay Dang', 'Caption', 'View', 'Like', 'Comment', 'Save', 'Share', 'Link Goc'];
+        
+        const rows = processedData.map(item => {
+            const safeCaption = `"${(item.caption || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+            const type = item.isPinned ? 'Ghim' : 'Thuong';
+            return [
+                item.id, type, formatDate(item.create_time), safeCaption, 
+                item.view, item.like, item.comment, item.save, item.share, 
+                item.link
+            ];
+        });
+        
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        const username = extractUsername($('channelInput').value) || 'channel';
+        link.setAttribute("download", `TikTok_${username}_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+</script>
+</body>
+</html>
